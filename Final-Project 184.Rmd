@@ -1,0 +1,360 @@
+---
+title: 'Stat 184: Final Project'
+author: "He Zhao, Haozhe Shan"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+  word_document: default
+---
+
+# Introduction
+The urban car market is a dynamic and complex landscape influenced by various factors, including location, economic conditions, and external events such as the COVID-19 pandemic. In this final project, we aim to provide a comprehensive analysis of the urban car market,We chose the the data of BMW X3 in these three cities. focusing on two primary research questions:
+
+Comparing Used Car Prices Between Urban Cities
+
+**Research Question1:** How do used car prices in urban cities like New York City (NYC), Los Angeles (LosA), and Chicago (Chic) compare to each other?
+
+Impact of the COVID-19 Pandemic on Used Car Prices and Age
+
+**Research Question2:** To what extent did the COVID-19 pandemic affect the price and age of used cars in the post-pandemic period compared to the pre-pandemic period?
+
+To address these research questions, we have collected and merged data from these three major urban cities: New York City (NYC), Los Angeles (LosA), and Chicago (Chic). We have filtered the data to exclude entries with zero mileage or price to ensure data accuracy.
+
+Our analysis aims to shed light on the following aspects of the urban car market:
+
+How do car prices vary across different urban locations?
+Are there noticeable trends in the relationship between car prices and key factors such as year of manufacture and mileage?
+Did the onset of the COVID-19 pandemic in 2020 have a discernible impact on used car prices and the age of vehicles in these urban areas?
+In the following sections, we will explore these research questions in detail, provide visual representations of the data, and draw meaningful conclusions based on our analysis. This project serves as a valuable resource for anyone interested in understanding the dynamics of the urban car market and its response to external economic factors.
+
+**Sources:** To conduct our research, we used Autotrader, a trusted and reputable online platform for buying and selling new, certified and used cars. Autotrader's mission is to provide the ultimate online solution for car buyers and sellers, offering a wide range of valuable features that make the process efficient and informative.Autotrader:  https://myslu.stlawu.edu/~clee/dataset/autotrader/
+
+The website Generates a CSV dataset of used cars listed at autotrader.com, based on a maker, a model, and a zip code.
+
+
+```{r, echo = F, warning=FALSE, message=FALSE}
+# clean-up R environment
+rm(list = ls())  
+
+# Load Packages 
+library(mosaic)
+library(ggformula)
+library(tidyverse)
+library(car)
+library(tinytex)
+
+# suggestion for sourcing and wrangling data:
+Chi          <- read_csv("data Chic.csv")  # read in the first location data
+Chi$location <- "Chic"   # add a variable 'location' to the first dataset
+Los          <- read_csv("data los.csv") # read in the second location's data
+Los$location <- "LosA"   # add a variable 'location' to the second dataset
+NY          <- read_csv("data NY.csv") # read in the second location's data
+NY$location <- "NYC"   # add a variable 'location' to the second dataset
+car_data_raw <- rbind(Chi, Los,NY)        # merge the two datasets together by stacking the rows
+car_data <- car_data_raw %>% 
+        filter(mileage > 0) %>%                   
+        filter(price >0)                           # filter out observations that are listed for $0 or have 0 mileage.
+car_data_C<- Chi %>% 
+        filter(mileage > 0) %>%                   
+        filter(price >0) 
+car_data_L<- Los %>% 
+        filter(mileage > 0) %>%                   
+        filter(price >0) 
+car_data_N<- NY %>% 
+        filter(mileage > 0) %>%                   
+        filter(price >0) 
+car_data$age <- 2023 - car_data$year               # create a new variable called age that tells us how old each car is.
+
+```
+
+
+# Summary table:
+```{r}
+library(dplyr)
+
+# Calculate the summary statistics for each location
+summary_stats <- car_data %>%
+  group_by(location) %>%
+  summarize(
+    sample_size = n(),
+    mean_price = mean(price, na.rm = TRUE),
+    sd_price = sd(price, na.rm = TRUE),
+    mean_year = mean(year, na.rm = TRUE),
+    sd_year = sd(year, na.rm = TRUE),
+    .groups = "drop" # This option will remove the grouping structure after summarizing
+  )
+
+# Print the combined statistics table
+print(summary_stats)
+
+```
+
+# Research Question 1
+
+**Comparing Used Car Prices Between Urban Cities**
+
+**Research Question:** How do used car prices in urban cities like New York City (NYC), Los Angeles (LosA), and Chicago (Chic) compare to each other?
+
+**Exploratory Data Analysis**
+
+To address this question, we will initially explore the relationship between car prices and the year of manufacture in each of the selected urban cities.
+
+**Figure 1: Scatter Plot of Year**
+```{r}
+# For Chicago
+ggplot(car_data_C, aes(x = year, y = price, color = "Chic")) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  scale_color_manual(values = "red") +
+  labs(color = "City") +
+  theme_minimal()
+
+# For Los Angeles
+ggplot(car_data_L, aes(x = year, y = price, color = "LosA")) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  scale_color_manual(values = "green") +
+  labs(color = "City") +
+  theme_minimal()
+
+# For New York City
+ggplot(car_data_N, aes(x = year, y = price, color = "NYC")) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  scale_color_manual(values = "blue") +
+  labs(color = "City") +
+  theme_minimal()
+
+```
+
+
+**Figure 2: Scatter Plot of Year vs. Price by Location**
+
+
+```{r}
+ car_data %>%
+  ggplot(aes(x=year,y=price,color=factor(location)))+
+  geom_point()+
+  geom_smooth(method = "lm",aes(group=factor(location)))
+```
+
+
+**TREND ANALYSIS:**
+Trend lines for each city, represented by different colors, show the progression of automobile prices from 2005 to 2023. The linear model suggests that prices are steadily increasing in all cities, with some of the fluctuations likely attributable to local economic factors.
+
+**Comparative observation:**
+While all cities show an upward trend, the slopes of the lines indicate different rates of price increases, so we calculated their slopes and showed that New York had the largest increase. The distribution of data points around the trend line indicates the variability of car prices.
+
+```{r}
+# Fit linear models for each city
+model_C <- lm(price ~ year, data = car_data_C %>% filter(price > 0))
+model_L <- lm(price ~ year, data = car_data_L %>% filter(price > 0))
+model_N <- lm(price ~ year, data = car_data_N %>% filter(price > 0))
+
+# Extract and compare the slopes (coefficients for 'year')
+slope_C <- coef(model_C)["year"]
+slope_L <- coef(model_L)["year"]
+slope_N <- coef(model_N)["year"]
+
+# Print the slopes to compare
+print(slope_C)
+print(slope_L)
+print(slope_N)
+
+```
+
+The results of our analysis have important implications for shedding light on the complex dynamics of automobile pricing, especially in urban settings.
+
+First, our study emphasizes the importance of considering the regional economic context when evaluating and understanding automobile pricing. Urban areas such as New York, Los Angeles, and Chicago have their own unique economic landscapes, consumer preferences, and urban infrastructures, all of which affect vehicle pricing.
+
+By comparing the price of the BMW X3 in these cities, we not only reveal the changing market conditions, but also emphasize the importance of regional factors in valuing a vehicle.
+These findings demonstrate the resilience and versatility of the automotive industry, demonstrating its ability to respond to challenging times and changing market conditions.
+In essence, our research contributes to a deeper understanding of how economic and global events reshape local markets and influence consumer decisions.
+
+Ultimately, these insights have practical implications for car buyers, sellers, and policymakers alike as they seek to make informed decisions in the evolving world of urban automotive markets.
+
+
+# Research Question 2
+
+**Impact of the COVID-19 Pandemic on Used Car Prices and Age**
+
+**Research Question:** To what extent did the COVID-19 pandemic affect the price and age of used cars in the post-pandemic period compared to the pre-pandemic period?
+
+To answer this question, we will investigate whether there is a significant difference in car prices between the pre-pandemic period (before 2020) and the post-pandemic period (2020 and after) for each of the selected urban locations.
+
+#Frequency table:
+```{r}
+library(dplyr)
+
+# Calculate descriptive statistics and add identifiers
+stats_before_2020N <- car_data_N %>%
+  filter(year < 2020) %>%
+  summarise(
+    location = "NYC",
+    period = "Before 2020",
+    mean_price = mean(price, na.rm = TRUE),
+    sd_price = sd(price, na.rm = TRUE),
+    median_price = median(price, na.rm = TRUE),
+    iqr_price = IQR(price, na.rm = TRUE)
+  )
+
+stats_before_2020L <- car_data_L %>%
+  filter(year < 2020) %>%
+  summarise(
+    location = "LosA",
+    period = "Before 2020",
+    mean_price = mean(price, na.rm = TRUE),
+    sd_price = sd(price, na.rm = TRUE),
+    median_price = median(price, na.rm = TRUE),
+    iqr_price = IQR(price, na.rm = TRUE)
+  )
+
+stats_before_2020C <- car_data_C %>%
+  filter(year < 2020) %>%
+  summarise(
+    location = "Chic",
+    period = "Before 2020",
+    mean_price = mean(price, na.rm = TRUE),
+    sd_price = sd(price, na.rm = TRUE),
+    median_price = median(price, na.rm = TRUE),
+    iqr_price = IQR(price, na.rm = TRUE)
+  )
+
+stats_after_2020N <- car_data_N %>%
+  filter(year >= 2020) %>%
+  summarise(
+    location = "NYC",
+    period = "After 2020",
+    mean_price = mean(price, na.rm = TRUE),
+    sd_price = sd(price, na.rm = TRUE),
+    median_price = median(price, na.rm = TRUE),
+    iqr_price = IQR(price, na.rm = TRUE)
+  )
+
+stats_after_2020L <- car_data_L %>%
+  filter(year >= 2020) %>%
+  summarise(
+    location = "LosA",
+    period = "After 2020",
+    mean_price = mean(price, na.rm = TRUE),
+    sd_price = sd(price, na.rm = TRUE),
+    median_price = median(price, na.rm = TRUE),
+    iqr_price = IQR(price, na.rm = TRUE)
+  )
+
+stats_after_2020C <- car_data_C %>%
+  filter(year >= 2020) %>%
+  summarise(
+    location = "Chic",
+    period = "After 2020",
+    mean_price = mean(price, na.rm = TRUE),
+    sd_price = sd(price, na.rm = TRUE),
+    median_price = median(price, na.rm = TRUE),
+    iqr_price = IQR(price, na.rm = TRUE)
+  )
+
+# Combine all statistics into one data frame
+all_stats <- bind_rows(
+  stats_before_2020N,
+  stats_before_2020L,
+  stats_before_2020C,
+  stats_after_2020N,
+  stats_after_2020L,
+  stats_after_2020C
+)
+
+# Print the combined statistics table
+print(all_stats)
+
+```
+**Figure 3:**
+```{r}
+library(ggplot2)
+library(dplyr)
+
+# Assuming `year` is a column in `car_data` that contains the year of the car
+car_data <- car_data %>%
+  mutate(period = ifelse(year < 2020, "Before 2020", "After 2020")) %>% # Create period variable
+  filter(mileage > 0, price > 0)  # Filter out rows with non-positive mileage or price
+
+# Calculate the summary statistics manually
+car_stats <- car_data %>%
+  group_by(location, period) %>%
+  summarize(
+    ymin = min(price, na.rm = TRUE),    # minimum price
+    lower = quantile(price, 0.25, na.rm = TRUE),  # lower hinge for the boxplot
+    middle = median(price, na.rm = TRUE),  # median for the boxplot
+    upper = quantile(price, 0.75, na.rm = TRUE),  # upper hinge for the boxplot
+    ymax = max(price, na.rm = TRUE),    # maximum price
+    .groups = "drop"  # This drops the grouping structure after summarizing
+  )
+
+# Plotting with the computed statistics
+ggplot(car_stats, aes(x = period, y = middle, fill = location)) +
+  geom_boxplot(stat = "identity", aes(lower = lower, upper = upper, middle = middle, ymin = ymin, ymax = ymax)) +
+  facet_wrap(~location, scales = "free") + # Separate plots for each city with free scales
+  labs(title = "Comparison of Car Prices by City, Before and After 2020",
+       x = "Period",
+       y = "Price",
+       fill = "City") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+```
+
+**Exploratory Data Analysis**
+
+The table above summarizes key statistics for car prices in each urban location, both before and after 2020. It includes metrics such as mean price, standard deviation of price, median price, and interquartile range (IQR). These statistics allow us to compare price changes between the two periods and assess whether the pandemic had a significant impact on used car prices.
+
+In the following section, we will provide a detailed conclusion based on our analysis of both research questions and offer insights into the dynamics of the urban car market.
+
+2020 is an important turning point, representing the beginning of the COVID-19 pandemic and its ripple effects on the global economy and local markets, including the used car market.
+
+Prior to 2020, the box plot shows a tighter distribution of prices, suggesting a tighter market with less volatility between the lowest and highest car prices in each city.
+
+After 2020, we observe a widening of the interquartile spacing, indicating increased price dispersion. This may reflect the market's response to the epidemic, including supply chain disruptions, a surge in demand for private cars, and shifts in consumer spending habits.
+
+The post-2020 median price line shows some volatility across all cities, implying that the impact of a pandemic on median car prices may vary by location. Each city's specific economic resilience or vulnerability could contribute to these differences.
+
+**Notable outliers:** The presence of outliers, especially becoming more pronounced after 2020, could indicate the emergence of a niche market for premium or low-depreciation vehicles, caused possibly because of a reduced supply of new vehicles due to the availability of new vehicles.
+
+Comparing these cities, it is clear that each reacted differently during the epidemic, reflecting unique local economic impacts, policy responses, and consumer confidence levels.
+
+The findings are of value to stakeholders ranging from policymakers to car dealers and buyers, highlighting the importance of market adaptation and understanding of consumer behavior in times of crisis.
+
+#Future work
+Further research could extend the analysis beyond 2023 to monitor the long-term impact of the pandemic on auto market prices as the economy recovers.
+
+Other Variables: Combining other variables, such as vehicle make and model, mileage, vehicle condition, and fuel type, allows for a more nuanced understanding of price determinants.
+
+Comparative economic analysis: a more in-depth look at the economic health of each city, including employment rates and income levels, to see how these factors correlate with used car market trends.
+
+
+
+# Conclusion
+
+In this comprehensive analysis of the urban car market, we addressed two primary research questions to gain insights into used car prices and their response to external factors, particularly the impact of the COVID-19 pandemic.
+
+**Research Question 1: Comparing Used Car Prices Between Urban Cities**
+
+Our analysis revealed significant variations in used car prices across the urban cities of New York City (NYC), Los Angeles (LosA), and Chicago (Chic). Through exploratory data analysis, we explored the relationships between car prices and key factors such as year of manufacture and mileage. Notably, the scatter plots and linear regression trends showed distinct patterns in each city.
+
+- Figure 1 and Figure 2 presented scatter plots depicting the relationships between car prices and the year of manufacture and mileage, respectively, for each urban location.
+- Summary statistics provided insights into the distribution of car prices and year of manufacture in each city.
+
+These findings suggest that urban factors, economic conditions, and local preferences contribute to the observed differences in used car prices between these cities. Urban car buyers may face distinct market dynamics, influencing their choices and pricing expectations.
+
+**Research Question 2: Impact of the COVID-19 Pandemic on Used Car Prices and Age**
+
+Our investigation into the impact of the COVID-19 pandemic on used car prices and age provided valuable insights into how external events can affect the urban car market. By comparing car prices before 2020 (pre-pandemic) and after 2020 (post-pandemic), we assessed whether significant changes occurred in response to the pandemic.
+
+- Figures 3 and 4 displayed The compasion of Car prices by cities bfoore and after 2020
+- Summary statistics quantified the mean price, standard deviation of price, median price, and interquartile range (IQR) for each urban location in both periods.
+
+Our analysis revealed that while there were fluctuations in used car prices, the pandemic's impact on pricing appeared nuanced and varied by location. Some urban areas may have experienced more substantial price fluctuations than others.
+
+In conclusion, this project provides valuable insights into the complexities of the urban car market. It highlights the importance of considering location-specific factors and external events when analyzing used car prices. The findings can inform potential car buyers, sellers, and industry stakeholders about the dynamics of urban car markets in different cities and their responses to significant economic events.
+
+Future research in this area could delve deeper into the factors driving these price differences and explore how external events, such as economic crises or policy changes, impact urban car markets further. Understanding these dynamics can empower individuals and businesses to make informed decisions in the ever-evolving world of urban car sales.
+
